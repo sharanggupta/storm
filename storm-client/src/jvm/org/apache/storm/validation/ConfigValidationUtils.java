@@ -162,7 +162,7 @@ public class ConfigValidationUtils {
     public abstract static class NestableFieldValidator implements FieldValidator {
         @Override
         public void validateField(String name, Object field) throws IllegalArgumentException {
-            validateField(null, name, field);
+            validateField("", name, field);
         }
 
         /**

@@ -18,6 +18,7 @@
 
 package org.apache.storm;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -68,6 +69,7 @@ import org.apache.storm.validation.ConfigValidationAnnotations.IsMapEntryType;
 import org.apache.storm.validation.ConfigValidationAnnotations.IsNoDuplicateInList;
 import org.apache.storm.validation.ConfigValidationAnnotations.IsString;
 import org.apache.storm.validation.ConfigValidationAnnotations.NotNull;
+import org.apache.storm.validation.ConfigValidationUtils;
 import org.junit.jupiter.api.Test;
 
 public class TestConfigValidate {
@@ -505,6 +507,21 @@ public class TestConfigValidate {
             assertThrows(IllegalArgumentException.class, () -> validator.validateField("test",
                     value));
         }
+    }
+
+    @Test
+    public void testValidatorMessagesWithoutParent() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> ListEntryTypeValidator.validateField("test", String.class, Arrays.asList("a", 1)));
+        assertEquals("Each element of the list test must be a java.lang.String. (1)", ex.getMessage());
+
+        ex = assertThrows(IllegalArgumentException.class,
+            () -> ConfigValidationUtils.fv(String.class, false).validateField("test", 1));
+        assertEquals("test must be a java.lang.String. (1)", ex.getMessage());
+
+        ex = assertThrows(IllegalArgumentException.class,
+            () -> new NotNullValidator().validateField("test", null));
+        assertEquals("Field test cannot be null! Actual value: null", ex.getMessage());
     }
 
     @Test

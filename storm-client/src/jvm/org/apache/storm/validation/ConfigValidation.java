@@ -316,7 +316,7 @@ public class ConfigValidation {
         public void validateField(String name, Object o) {
             if (o == null) {
                 throw new IllegalArgumentException("Field " + name
-                        + "cannot be null! Actual value: " + o);
+                        + " cannot be null! Actual value: " + o);
             }
         }
     }
