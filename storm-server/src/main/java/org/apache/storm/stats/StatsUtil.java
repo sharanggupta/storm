@@ -1034,7 +1034,8 @@ public class StatsUtil {
                 Map<T, Long> stream2count = entry.getValue();
 
                 if (!ret.containsKey(win)) {
-                    ret.put(win, stream2count);
+                    // a copy: the totals must not end up in the stats of the first executor
+                    ret.put(win, new HashMap<>(stream2count));
                 } else {
                     Map<T, Long> existing = ret.get(win);
                     for (Map.Entry<T, Long> subEntry : stream2count.entrySet()) {
@@ -1840,7 +1841,9 @@ public class StatsUtil {
                 ret.put(k, mm1);
             } else {
                 Map<K, List> tmp = new HashMap<>();
-                for (K kk : mm1.keySet()) {
+                Set<K> innerKeys = new HashSet<>(mm1.keySet());
+                innerKeys.addAll(mm2.keySet());
+                for (K kk : innerKeys) {
                     List seq1 = mm1.get(kk);
                     List seq2 = mm2.get(kk);
                     if (seq1 == null && seq2 == null) {

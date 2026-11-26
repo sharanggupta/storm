@@ -501,4 +501,49 @@ public class TestStatsUtil {
         verify(mockStormClusterState, times(1))
             .lastError(eq("my-storm-id"), eq("my-spout"));
     }
+
+    @Test
+    public void aggregateCounts_doesNotModifyItsInput() {
+        Map<String, Map<String, Long>> first = windowed("600", "s", 100L);
+        Map<String, Map<String, Long>> second = windowed("600", "s", 100L);
+
+        Map<String, Map<String, Long>> total = StatsUtil.aggregateCounts(Arrays.asList(first, second));
+
+        assertEquals(200L, total.get("600").get("s"));
+        assertEquals(100L, first.get("600").get("s"));
+        assertEquals(100L, second.get("600").get("s"));
+    }
+
+    @Test
+    public void aggregateAverages_afterAggregateCounts_weightsEachExecutorByItsOwnCount() {
+        // 100 tuples at 1.0 ms and 100 tuples at 3.0 ms average 2.0 ms
+        List<Map<String, Map<String, Long>>> counts =
+            Arrays.asList(windowed("600", "s", 100L), windowed("600", "s", 100L));
+        List<Map<String, Map<String, Double>>> latencies =
+            Arrays.asList(windowed("600", "s", 1.0D), windowed("600", "s", 3.0D));
+
+        StatsUtil.aggregateCounts(counts);
+        Map<String, Map<String, Double>> averages = StatsUtil.aggregateAverages(latencies, counts);
+
+        assertEquals(2.0D, averages.get("600").get("s"), 1e-9);
+    }
+
+    @Test
+    public void aggregateAverages_keepsStreamsOnlySeenByLaterExecutors() {
+        Map<String, Map<String, Double>> averages = StatsUtil.aggregateAverages(
+            Arrays.asList(windowed("600", "a", 1.0D), windowed("600", "b", 3.0D)),
+            Arrays.asList(windowed("600", "a", 100L), windowed("600", "b", 100L)));
+
+        assertEquals(2, averages.get("600").size(), "streams: " + averages.get("600").keySet());
+        assertEquals(1.0D, averages.get("600").get("a"), 1e-9);
+        assertEquals(3.0D, averages.get("600").get("b"), 1e-9);
+    }
+
+    private static <V> Map<String, Map<String, V>> windowed(String window, String stream, V value) {
+        Map<String, V> streamToValue = new HashMap<>();
+        streamToValue.put(stream, value);
+        Map<String, Map<String, V>> windowToStreams = new HashMap<>();
+        windowToStreams.put(window, streamToValue);
+        return windowToStreams;
+    }
 }
