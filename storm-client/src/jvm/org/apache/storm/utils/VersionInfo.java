@@ -165,6 +165,10 @@ public final class VersionInfo {
                     LOG.error("Skipping {}; got an error while trying to parse the jar file.", part,
                             e);
                 }
+                if (ret != null) {
+                    // the first match on the classpath wins, as for a directory
+                    break;
+                }
             } else if (p.endsWith("*")) {
                 // for a path like /<parent-path>/*
                 Path parent = p.getParent();
