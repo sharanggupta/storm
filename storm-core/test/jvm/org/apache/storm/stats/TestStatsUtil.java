@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -500,5 +501,20 @@ public class TestStatsUtil {
             .lastError(eq("my-storm-id"), eq("my-component"));
         verify(mockStormClusterState, times(1))
             .lastError(eq("my-storm-id"), eq("my-spout"));
+    }
+
+    @Test
+    public void floatStr_doesNotDependOnTheDefaultLocale() {
+        Locale defaultLocale = Locale.getDefault();
+        try {
+            // de-DE writes a decimal comma, ar-SA other digits
+            for (Locale locale : new Locale[] {Locale.GERMANY, Locale.forLanguageTag("ar-SA"), Locale.US}) {
+                Locale.setDefault(locale);
+                assertEquals("0.614", StatsUtil.floatStr(0.6140350877192983));
+                assertEquals("1234.500", StatsUtil.floatStr(1234.5));
+            }
+        } finally {
+            Locale.setDefault(defaultLocale);
+        }
     }
 }

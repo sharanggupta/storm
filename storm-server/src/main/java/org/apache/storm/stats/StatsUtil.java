@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -2330,7 +2331,7 @@ public class StatsUtil {
         if (n == null) {
             return "0";
         }
-        return String.format("%.3f", n);
+        return String.format(Locale.ROOT, "%.3f", n);
     }
 
     public static String errorSubset(String errorStr) {
