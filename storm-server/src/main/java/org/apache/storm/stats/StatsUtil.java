@@ -2213,13 +2213,18 @@ public class StatsUtil {
 
     private static Number sumOr0(Object a, Object b) {
         if (isValidNumber(a) && isValidNumber(b)) {
-            if (a instanceof Long || a instanceof Integer) {
+            // a missing value defaults to the Integer 0, which must not truncate a double
+            if (isIntegral(a) && isIntegral(b)) {
                 return ((Number) a).longValue() + ((Number) b).longValue();
             } else {
                 return ((Number) a).doubleValue() + ((Number) b).doubleValue();
             }
         }
         return 0;
+    }
+
+    private static boolean isIntegral(Object x) {
+        return x instanceof Long || x instanceof Integer;
     }
 
     private static double productOr0(Object a, Object b) {

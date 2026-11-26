@@ -501,4 +501,35 @@ public class TestStatsUtil {
         verify(mockStormClusterState, times(1))
             .lastError(eq("my-storm-id"), eq("my-spout"));
     }
+
+    @Test
+    public void mergeAggCompStatsTopoPageBolt_keepsFractionalLatencyTotals() {
+        // two executors, each with 20 tuples executed in 0.045 ms and processed in 0.025 ms
+        Map<String, Object> executorStats = new HashMap<>();
+        executorStats.put("executeLatencyTotal", 0.9D);
+        executorStats.put("processLatencyTotal", 0.5D);
+        executorStats.put("executed", 20L);
+        executorStats.put("acked", 20L);
+
+        Map<String, Object> merged = StatsUtil.mergeAggCompStatsTopoPageBolt(null, executorStats);
+        merged = StatsUtil.mergeAggCompStatsTopoPageBolt(merged, executorStats);
+
+        assertEquals(1.8D, ((Number) merged.get("executeLatencyTotal")).doubleValue(), 1e-9);
+        assertEquals(1.0D, ((Number) merged.get("processLatencyTotal")).doubleValue(), 1e-9);
+        assertEquals(40L, merged.get("executed"));
+        assertEquals(40L, merged.get("acked"));
+    }
+
+    @Test
+    public void mergeAggCompStatsTopoPageSpout_keepsFractionalLatencyTotals() {
+        Map<String, Object> executorStats = new HashMap<>();
+        executorStats.put("completeLatencyTotal", 0.9D);
+        executorStats.put("acked", 20L);
+
+        Map<String, Object> merged = StatsUtil.mergeAggCompStatsTopoPageSpout(null, executorStats);
+        merged = StatsUtil.mergeAggCompStatsTopoPageSpout(merged, executorStats);
+
+        assertEquals(1.8D, ((Number) merged.get("completeLatencyTotal")).doubleValue(), 1e-9);
+        assertEquals(40L, merged.get("acked"));
+    }
 }
