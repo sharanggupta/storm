@@ -189,14 +189,6 @@ public class StormCommon {
         }
     }
 
-    private static Set<String> getStreamOutputFields(Map<String, StreamInfo> streams) {
-        Set<String> outputFields = new HashSet<>();
-        for (StreamInfo streamInfo : streams.values()) {
-            outputFields.addAll(streamInfo.get_output_fields());
-        }
-        return outputFields;
-    }
-
     public static void validateStructure(StormTopology topology) throws InvalidTopologyException {
         Map<String, Object> componentMap = allComponents(topology);
         for (Map.Entry<String, Object> entry : componentMap.entrySet()) {
@@ -223,13 +215,13 @@ public class StormCommon {
                 Grouping grouping = input.getValue();
                 if (Thrift.groupingType(grouping) == Grouping._Fields.FIELDS) {
                     List<String> fields = new ArrayList<>(grouping.get_fields());
-                    Map<String, StreamInfo> streams = sourceComponent.get_streams();
-                    Set<String> sourceOutputFields = getStreamOutputFields(streams);
-                    fields.removeAll(sourceOutputFields);
+                    // only the fields of the subscribed stream can be grouped on
+                    fields.removeAll(sourceComponent.get_streams().get(sourceStreamId)
+                            .get_output_fields());
                     if (fields.size() != 0) {
                         throw new WrappedInvalidTopologyException("Component: [" + componentId
                                 + "] subscribes from stream: [" + sourceStreamId + "] of component "
-                                + "[" + sourceComponentId + "] + with non-existent fields: "
+                                + "[" + sourceComponentId + "] with non-existent fields: "
                                 + fields);
                     }
                 }

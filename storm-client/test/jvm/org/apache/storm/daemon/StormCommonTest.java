@@ -13,6 +13,7 @@
 package org.apache.storm.daemon;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -21,7 +22,15 @@ import java.util.Set;
 import org.apache.storm.Constants;
 import org.apache.storm.generated.GlobalStreamId;
 import org.apache.storm.generated.Grouping;
+import org.apache.storm.generated.InvalidTopologyException;
+import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.GeneralTopologyContext;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.testing.TestWordCounter;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.topology.TopologyBuilder;
+import org.apache.storm.topology.base.BaseRichSpout;
+import org.apache.storm.tuple.Fields;
 import org.junit.jupiter.api.Test;
 
 public class StormCommonTest {
@@ -62,5 +71,46 @@ public class StormCommonTest {
                 new GlobalStreamId(Acker.ACKER_COMPONENT_ID, "ack"), new Grouping()));
 
         assertEquals(Set.of(), StormCommon.upstreamFeedbackSourceComponents(context, "sink"));
+    }
+
+    @Test
+    public void testValidateStructureChecksFieldsGroupingAgainstSubscribedStream() {
+        // "id" is a field of the "control" stream, not of the default stream
+        TopologyBuilder builder = new TopologyBuilder();
+        builder.setSpout("spout", new TwoStreamSpout());
+        builder.setBolt("bolt", new TestWordCounter()).fieldsGrouping("spout", new Fields("id"));
+
+        InvalidTopologyException e = assertThrows(InvalidTopologyException.class,
+                () -> StormCommon.validateStructure(builder.createTopology()));
+        assertEquals("Component: [bolt] subscribes from stream: [default] of component [spout] "
+                + "with non-existent fields: [id]", e.get_msg());
+    }
+
+    @Test
+    public void testValidateStructureAcceptsFieldsOfSubscribedStream() throws Exception {
+        TopologyBuilder builder = new TopologyBuilder();
+        builder.setSpout("spout", new TwoStreamSpout());
+        builder.setBolt("words", new TestWordCounter()).fieldsGrouping("spout", new Fields("word"));
+        builder.setBolt("ids", new TestWordCounter())
+                .fieldsGrouping("spout", "control", new Fields("id"));
+
+        StormCommon.validateStructure(builder.createTopology());
+    }
+
+    private static class TwoStreamSpout extends BaseRichSpout {
+        @Override
+        public void open(Map<String, Object> conf, TopologyContext context,
+                SpoutOutputCollector collector) {
+        }
+
+        @Override
+        public void nextTuple() {
+        }
+
+        @Override
+        public void declareOutputFields(OutputFieldsDeclarer declarer) {
+            declarer.declare(new Fields("word"));
+            declarer.declareStream("control", new Fields("id"));
+        }
     }
 }
